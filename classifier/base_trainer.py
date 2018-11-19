@@ -12,38 +12,38 @@ from classifier.cnn.text_cnn_model import TextCNN
 
 
 class ClassifierTrainer:
-    props: TextClassifierInformation = None
+    ci: TextClassifierInformation = None
 
-    def __init__(self, props: TextClassifierInformation, pb: Pb, restore_model, restore_ckpt=None):
+    def __init__(self, ci: TextClassifierInformation, pb: Pb, restore_model, restore_ckpt=None):
         tf.reset_default_graph()
 
-        self.props = props
+        self.ci = ci
         self.pb = pb
 
         if not restore_model:
             self.clear_train_data()
             self.delete_loss_hist()
 
-        env_helpers.create_directory(self.props.tf_path)
-        env_helpers.create_directory(self.props.loss_hist_path)
-        env_helpers.create_directory(self.props.train_summary_path)
-        env_helpers.create_directory(self.props.train_summary_path)
-        env_helpers.create_directory(self.props.test_summary_path)
+        env_helpers.create_directory(self.ci.tf_path)
+        env_helpers.create_directory(self.ci.loss_hist_path)
+        env_helpers.create_directory(self.ci.train_summary_path)
+        env_helpers.create_directory(self.ci.train_summary_path)
+        env_helpers.create_directory(self.ci.test_summary_path)
 
-        env_helpers.create_directory(self.props.pb_path)
-        env_helpers.create_directory(self.props.checkpoint_path)
-        env_helpers.create_directory(self.props.loss_hist_path)
-        env_helpers.create_directory(self.props.train_summary_path)
-        env_helpers.create_directory(self.props.cv_summary_path)
-        env_helpers.create_directory(self.props.test_summary_path)
+        env_helpers.create_directory(self.ci.pb_path)
+        env_helpers.create_directory(self.ci.checkpoint_path)
+        env_helpers.create_directory(self.ci.loss_hist_path)
+        env_helpers.create_directory(self.ci.train_summary_path)
+        env_helpers.create_directory(self.ci.cv_summary_path)
+        env_helpers.create_directory(self.ci.test_summary_path)
 
         self.model = self.load_model()
         self.saver = tf.train.Saver(max_to_keep=100)
         self.sess = self.init_model(saver=self.saver, restore=restore_model, ckpt=restore_ckpt)
 
-        self.train_summary_writer = tf.summary.FileWriter(self.props.train_summary_path, self.sess.graph)
-        self.cv_summary_writer = tf.summary.FileWriter(self.props.cv_summary_path, self.sess.graph)
-        self.test_summary_writer = tf.summary.FileWriter(self.props.test_summary_path, self.sess.graph)
+        self.train_summary_writer = tf.summary.FileWriter(self.ci.train_summary_path, self.sess.graph)
+        self.cv_summary_writer = tf.summary.FileWriter(self.ci.cv_summary_path, self.sess.graph)
+        self.test_summary_writer = tf.summary.FileWriter(self.ci.test_summary_path, self.sess.graph)
 
         self.pb.save_graph_def(self.sess)
         self.load_loss_hists(restore=restore_model)
@@ -55,7 +55,7 @@ class ClassifierTrainer:
     def random_batch(self, data_y, data_x):
         # shuffle_y, shuffle_x = sklearn.utils.shuffle(data_y, data_x, n_samples=self.ci.batch_size)
 
-        batch_size = self.props.batch_size
+        batch_size = self.ci.batch_size
         (rows, cols) = data_x.shape
         batch_from = randint(0, rows)
         batch_to = batch_from + batch_size
@@ -74,7 +74,7 @@ class ClassifierTrainer:
         return (y_data, x_data)
 
     def next_batch(self, data_y, data_x, step):
-        batch_size = self.props.batch_size
+        batch_size = self.ci.batch_size
         (rows, cols) = data_x.shape
         if (rows < batch_size):
             return (data_y, data_x)
@@ -101,11 +101,11 @@ class ClassifierTrainer:
         return (y_data, x_data)
 
     def save_model(self, sess, saver, global_step=None, force=False):
-        if global_step % self.props.auto_ckpt_interval == 0 or force is True:
-            saver.save(sess, self.props.checkpoint_file)
+        if global_step % self.ci.auto_ckpt_interval == 0 or force is True:
+            saver.save(sess, self.ci.checkpoint_file)
             # print("model saved")
-        if global_step % self.props.auto_snapshot_interval == 0 or force is True:
-            save_path = saver.save(sess, self.props.checkpoint_file, global_step=global_step)
+        if global_step % self.ci.auto_snapshot_interval == 0 or force is True:
+            save_path = saver.save(sess, self.ci.checkpoint_file, global_step=global_step)
             print("model saved to: %s" % save_path)
 
     def evaluate_best_checkpoint(self):
@@ -169,14 +169,14 @@ class ClassifierTrainer:
         self.save_loss_hist(list_name='test_cost_hist', list=self.test_cost_hist)
 
     def get_pickle_filename(self, list_name):
-        return os.path.join(self.props.loss_hist_path, '%s' % (list_name))
+        return os.path.join(self.ci.loss_hist_path, '%s' % (list_name))
 
     def clear_train_data(self):
         print("model folder truncated")
-        env_helpers.clear_folder(dir=self.props.tf_path)
+        env_helpers.clear_folder(dir=self.ci.tf_path)
 
     def delete_loss_hist(self):
-        env_helpers.clear_folder(dir=self.props.loss_hist_path)
+        env_helpers.clear_folder(dir=self.ci.loss_hist_path)
 
     def init_model(self, saver, restore, ckpt=None):
         # tf.reset_default_graph()
@@ -185,15 +185,15 @@ class ClassifierTrainer:
         try:
             if restore:
                 restore_latest = ckpt is None
-                if ckpt is not None and ckpt % self.props.auto_ckpt_interval != 0:
-                    print('checkpoint snapshots are made all %d steps. %d cannot be restored. Restoring latest checkpoint...' % (self.props.auto_ckpt_interval, ckpt))
+                if ckpt is not None and ckpt % self.ci.auto_ckpt_interval != 0:
+                    print('checkpoint snapshots are made all %d steps. %d cannot be restored. Restoring latest checkpoint...' % (self.ci.auto_ckpt_interval, ckpt))
                     restore_latest = True
 
                 if restore_latest:
-                    saver.restore(sess, tf.train.latest_checkpoint(self.props.checkpoint_path))
+                    saver.restore(sess, tf.train.latest_checkpoint(self.ci.checkpoint_path))
                     print("latest checkpoint restored")
                 else:
-                    path = '%s-%d' % (self.props.checkpoint_file, ckpt)
+                    path = '%s-%d' % (self.ci.checkpoint_file, ckpt)
                     tf.reset_default_graph()
                     saver.restore(sess, path)
                     print('checkpoint %d restored' % ckpt)
@@ -206,11 +206,11 @@ class ClassifierTrainer:
         return sess
 
     def restore(self, sess):
-        snapshot_file = os.path.join(self.props.tf_path, 'variables.ckpt')
+        snapshot_file = os.path.join(self.ci.tf_path, 'variables.ckpt')
         self.saver.restore(sess, snapshot_file)
         print("Model restored.")
 
     def save(self, sess):
-        snapshot_file = os.path.join(self.props.tf_path, 'variables.ckpt')
+        snapshot_file = os.path.join(self.ci.tf_path, 'variables.ckpt')
         save_path = self.saver.save(sess, snapshot_file)
         print("Model saved in file: %s" % save_path)

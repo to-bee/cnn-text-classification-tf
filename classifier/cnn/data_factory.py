@@ -8,28 +8,31 @@ from nltk import sent_tokenize
 
 from classifier.cnn.text_ci import TextClassifierInformation
 from classifier.cnn.text_cnn_df import TextDataFrame
+from monitoring import models
 from monitoring.models import Email, LABEL_SPAM
 
 
 class DataFactory(object):
     def __init__(self, ci: TextClassifierInformation):
         self.ci = ci
-        self.df = TextDataFrame(self.ci, name='df1', restore=False)
+        self.df = TextDataFrame(self.ci, name='df1_train', restore=False)
 
-    def collect_train_data(self):
-        spam_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=LABEL_SPAM, text_plain__isnull=False)[0:10]
+    def collect_data(self)->TextDataFrame:
+        spam_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=LABEL_SPAM, text_plain__isnull=False)
         spam_mails: List[str] = self.preprocess_samples(qs=spam_mails_qs, label=LABEL_SPAM)
-        self.add_samples(raw_data=spam_mails, label_key=LABEL_SPAM)
+        self.add_samples(raw_data=spam_mails, label_key=models.LABEL_SPAM)
 
-        # ham_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=LABEL_HAM, text_plain__isnull=False)
-        # ham_mails: List[str] = self.preprocess_samples(qs=ham_mails_qs, label=LABEL_HAM)
-        # self.add_samples(raw_data=ham_mails, label_key=LABEL_HAM)
-        #
-        # update_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=LABEL_UPDATES, text_plain__isnull=False)
-        # update_mails: List[str] = self.preprocess_samples(qs=update_mails_qs, label=LABEL_UPDATES)
-        # self.add_samples(raw_data=update_mails, label_key=LABEL_UPDATES)
+        ham_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=models.LABEL_HAM, text_plain__isnull=False)
+        ham_mails: List[str] = self.preprocess_samples(qs=ham_mails_qs, label=models.LABEL_HAM)
+        self.add_samples(raw_data=ham_mails, label_key=models.LABEL_HAM)
+
+        update_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=models.LABEL_UPDATES, text_plain__isnull=False)
+        update_mails: List[str] = self.preprocess_samples(qs=update_mails_qs, label=models.LABEL_UPDATES)
+        self.add_samples(raw_data=update_mails, label_key=models.LABEL_UPDATES)
 
         self.vectorize_data()
+
+        return self.df
 
     def add_samples(self, raw_data: List[str], label_key: str):
         label_id = self.ci.label2id(key=label_key)

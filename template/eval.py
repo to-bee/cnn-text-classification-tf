@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import learn
 
-import data_helpers
+from template import data_helpers
 
 # Parameters
 # ==================================================

@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 
 
 class TextCNN(object):
@@ -7,9 +6,9 @@ class TextCNN(object):
     A CNN for text classification.
     Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
     """
-    def __init__(
-      self, sequence_length, num_classes, vocab_size,embedding_size, filter_sizes, num_filters, l2_reg_lambda, learning_rate):
 
+    def __init__(
+            self, sequence_length, num_classes, vocab_size, embedding_size, filter_sizes, num_filters, l2_reg_lambda, learning_rate):
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.y_true = tf.placeholder(tf.float32, [None, num_classes], name="y_true")
@@ -75,10 +74,9 @@ class TextCNN(object):
             self.logits = tf.argmax(self.scores, axis=1, name="logits")
 
         # Calculate mean cross-entropy loss
-        with tf.name_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.y_true)
-            self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
-
+        # with tf.name_scope("loss"):
+        #     losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.y_true)
+        #     self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
 
         with tf.name_scope("Basic-Metrics"):
             correct_prediction = tf.equal(self.logits, y_true)
@@ -87,8 +85,9 @@ class TextCNN(object):
 
             # Computes the mean of elements across dimensions of a tensor.
             # so in this case across output probabilties
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.layer_fc_dropout, labels=self.y_true)
-            self.cost = tf.reduce_mean(cross_entropy, name="cost")
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.scores, labels=self.y_true)
+            # self.cost = tf.reduce_mean(cross_entropy, name="cost") # old one without l2 regularization
+            self.cost = tf.reduce_mean(cross_entropy, name="cost") + l2_reg_lambda * l2_loss  # from cnn-text-classification-tf
             # save that single number
             tf.summary.scalar("xent", self.cost)
 

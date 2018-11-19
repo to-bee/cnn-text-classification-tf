@@ -1,6 +1,6 @@
 import os
 
-import env_helpers
+from classifier import env_helpers
 
 
 class ClassifierInformation(object):
@@ -68,5 +68,3 @@ class ClassifierInformation(object):
     @property
     def pb_labels_modified(self):
         return os.path.getmtime(self.pb_labels_path) if os.path.isfile(self.pb_labels_path) else 0
-
-
