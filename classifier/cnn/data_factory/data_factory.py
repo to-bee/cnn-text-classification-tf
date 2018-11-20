@@ -4,35 +4,16 @@ from typing import List
 import numpy as np
 from bs4 import BeautifulSoup
 from django.db.models import QuerySet
-from nltk import sent_tokenize
 
 from classifier.cnn.text_ci import TextClassifierInformation
 from classifier.cnn.text_cnn_df import TextDataFrame
-from monitoring import models
-from monitoring.models import Email, LABEL_SPAM
 
 
 class DataFactory(object):
+    df: TextDataFrame = None
+
     def __init__(self, ci: TextClassifierInformation):
         self.ci = ci
-        self.df = TextDataFrame(self.ci, name='df1_train', restore=False)
-
-    def collect_data(self)->TextDataFrame:
-        spam_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=LABEL_SPAM, text_plain__isnull=False)
-        spam_mails: List[str] = self.preprocess_samples(qs=spam_mails_qs, label=LABEL_SPAM)
-        self.add_samples(raw_data=spam_mails, label_key=models.LABEL_SPAM)
-
-        ham_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=models.LABEL_HAM, text_plain__isnull=False)
-        ham_mails: List[str] = self.preprocess_samples(qs=ham_mails_qs, label=models.LABEL_HAM)
-        self.add_samples(raw_data=ham_mails, label_key=models.LABEL_HAM)
-
-        update_mails_qs: QuerySet = Email.objects.filter(human_annotations__classification=models.LABEL_UPDATES, text_plain__isnull=False)
-        update_mails: List[str] = self.preprocess_samples(qs=update_mails_qs, label=models.LABEL_UPDATES)
-        self.add_samples(raw_data=update_mails, label_key=models.LABEL_UPDATES)
-
-        self.vectorize_data()
-
-        return self.df
 
     def add_samples(self, raw_data: List[str], label_key: str):
         label_id = self.ci.label2id(key=label_key)
@@ -41,7 +22,7 @@ class DataFactory(object):
 
         self.df.add_rows(raw_data=raw_data, data_y=data_y)
 
-    def preprocess_samples(self, qs: QuerySet, label) -> List[str]:
+    def preprocess_samples(self, qs: QuerySet) -> List[str]:
         text_plain_qs = qs.values_list('text_plain', flat=True)
 
         textes = list(text_plain_qs)
@@ -53,6 +34,7 @@ class DataFactory(object):
         textes = [self.replace_urls(text) for text in textes]
 
         # Tokenize text
+        from nltk import sent_tokenize
         lines = []
         for text in textes:
             tokens = sent_tokenize(text)
@@ -121,6 +103,3 @@ class DataFactory(object):
 
     def replace_urls(self, line):
         return re.sub(r'^https?:\/\/.*[\r\n]*', '', line, flags=re.MULTILINE)
-
-    def vectorize_data(self):
-        self.df.vectorize_data()

@@ -5,13 +5,14 @@ import django
 if not os.getenv('DJANGO_SETTINGS_MODULE'):
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'configuration.settings_local')
     django.setup()
+from classifier.cnn.data_factory.trainset_factory import TrainSetFactory
+
 from classifier.cnn.text_cnn_df import TextDataFrame
 
-from classifier.cnn.data_factory import DataFactory
 from classifier.cnn.text_ci import TextClassifierInformation
 
 if __name__ == '__main__':
-    data_factory = DataFactory(ci=TextClassifierInformation())
+    data_factory = TrainSetFactory(ci=TextClassifierInformation())
     df: TextDataFrame = data_factory.collect_data()
     df.randomize()
 

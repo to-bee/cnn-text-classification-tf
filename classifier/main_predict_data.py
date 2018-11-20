@@ -2,41 +2,48 @@ import os
 
 import django
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'millionaire.settings'
-django.setup()
+if not os.getenv('DJANGO_SETTINGS_MODULE'):
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'configuration.settings_local')
+    django.setup()
+
+from monitoring import models
+
+from classifier.cnn.data_factory.testset_factory import TestSetFactory
+from classifier.cnn.text_ci import TextClassifierInformation
+from classifier.cnn.text_cnn_df import TextDataFrame
+from classifier.pb import Pb
+from classifier.predictor import ClassifierPredictor
 
 import numpy as np
 
-from ml.predictor import ClassifierPredictor
-from ml.pb import Pb
 
+def predict_data():
+    ci = TextClassifierInformation()
 
-def predict_data(props, rows):
-    predictor = ClassifierPredictor(props=props, pb=Pb(props=props))
-    probs = predictor.fetch_probs(x_batch=np.matrix(rows))
-    for prob_row in probs:
-        prediction_idx = np.argmax(prob_row)
-        prediction = props.id2char(prediction_idx)
+    df_train = TextDataFrame(ci, name='df1_train', restore=True)
+    vocab_processor = df_train.vocab_processor
+
+    data_factory = TestSetFactory(ci=TextClassifierInformation(), vocab_processor=vocab_processor)
+    df: TextDataFrame = data_factory.collect_data()
+    df.randomize()
+
+    df.show_summary()
+    df.save_dataset()
+
+    data_x = df.data_x
+
+    predictor = ClassifierPredictor(ci=ci, pb=Pb(ci=ci))
+    probs = predictor.fetch_probs(x_batch=np.matrix(data_x))
+    for prob_row, raw_text in zip(probs, df.raw_data):
+        prediction_idx = int(np.argmax(prob_row))
+        prediction = ci.id2label(prediction_idx)
         prob_row_str = ', '.join(['{0:1.3f}'.format(prob) for prob in prob_row])
-        print(f'Predicted label: {prediction}, Probabilities for (lost,won,draw): {prob_row_str}')
+        print(f'Text: {raw_text}')
+        print(f'Predicted label: {prediction}')
+        print(f'Probabilities for ({models.LABEL_SPAM},{models.LABEL_HAM},{models.LABEL_UPDATES}): {prob_row_str}')
+        print('')
 
 
 if __name__ == "__main__":
-    for props in [LinearRegressionClassifierInformation(), WinOrLoseCnnClassifierInformation(), WinOrLoseLogisticRegressionClassifierInformation()]:
-        rows = []
-        rows.append(props.create_row(
-            team_1_normalized_world_ranking_nr=1,
-            team_2_normalized_world_ranking_nr=100,
-        ))
-
-        rows.append(props.create_row(
-            team_1_normalized_world_ranking_nr=100,
-            team_2_normalized_world_ranking_nr=100,
-        ))
-
-        rows.append(props.create_row(
-            team_1_normalized_world_ranking_nr=100,
-            team_2_normalized_world_ranking_nr=1,
-        ))
-        predict_data(props=props, rows=rows)
-        print()
+    predict_data()
+    print()

@@ -6,7 +6,7 @@ from monitoring.models import LABEL_SPAM, LABEL_HAM, LABEL_UPDATES
 
 class TextClassifierInformation(ClassifierInformation):
     name = 'text_cnn'
-    train_steps = 4000
+    train_steps = 1000
     dropout_train = 0.5  # Dropout rate
     l2_reg_lambda = 0.0  # Lambda regularization
 

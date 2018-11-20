@@ -5,6 +5,7 @@ from abc import ABC
 from typing import List
 
 import numpy as np
+from sklearn.utils import shuffle
 
 from classifier import env_helpers
 from classifier.cnn.text_ci import TextClassifierInformation
@@ -13,6 +14,7 @@ current_year = datetime.datetime.now().year
 
 
 class BaseDataFrame(ABC):
+    vocab_processor = None
     vocab_size: int
     raw_data: List
     data_x: np.ndarray
@@ -40,7 +42,8 @@ class BaseDataFrame(ABC):
         fn_raw = os.path.join(self.ci.df_path, f"cname={self.ci.name},name={self.name}-raw.npy")
         fn_x = os.path.join(self.ci.df_path, f"cname={self.ci.name},name={self.name}-x.npy")
         fn_y = os.path.join(self.ci.df_path, f"cname={self.ci.name},name={self.name}-y.npy")
-        return vocab_size, fn_raw, fn_x, fn_y
+        fn_vocab = os.path.join(self.ci.df_path, f"cname={self.ci.name},name={self.name}-vocab")
+        return vocab_size, fn_raw, fn_x, fn_y, fn_vocab
 
     def show_summary(self):
         print('')
@@ -50,30 +53,39 @@ class BaseDataFrame(ABC):
             print("Class %s: %s samples" % (c, list(self.data_y[:, c]).count(1)))
 
     def load_dataset(self):
-        fn_vocab_size, fn_raw, fn_x, fn_y = self.get_pickle_filename()
+        fn_vocab_size, fn_raw, fn_x, fn_y, fn_vocab = self.get_pickle_filename()
         if os.path.isfile(fn_x) and os.path.isfile(fn_y):
             self.vocab_size = int(np.load(fn_vocab_size))
             self.raw_data = np.load(fn_raw)
             self.data_x = np.load(fn_x)
             self.data_y = np.load(fn_y)
+
+            from tensorflow.contrib.learn.python.learn.preprocessing import VocabularyProcessor
+            self.vocab_processor = VocabularyProcessor.restore(fn_vocab)
         else:
             self.init_df()
 
     def save_dataset(self):
-        fn_vocab_size, fn_raw, fn_x, fn_y = self.get_pickle_filename()
+        fn_vocab_size, fn_raw, fn_x, fn_y, fn_vocab = self.get_pickle_filename()
         np.save(fn_vocab_size, self.vocab_size)
         np.save(fn_raw, self.raw_data)
         np.save(fn_x, self.data_x)
         np.save(fn_y, self.data_y)
+
+        if self.vocab_processor:
+            self.vocab_processor.save(fn_vocab)
+
         print(f'Dataset "{self.name}" saved')
 
     def randomize(self):
         print('Randomize data..')
 
-        combined = list(zip(self.raw_data, self.data_x, self.data_y))
-        random.shuffle(combined)
+        # Not working with mixed types (List, ndarray)
+        # combined = list(zip(self.data_x, self.data_y, self.raw_data))
+        # random.shuffle(combined)
+        # self.data_x[:], self.data_y[:], self.raw_data[:] = zip(*combined)
 
-        self.raw_data[:], self.data_x[:], self.data_y[:] = zip(*combined)
+        self.data_y, self.data_x, self.raw_data = shuffle(self.data_y, self.data_x, self.raw_data)
 
     def get_row(self, idx):
         return self.data_x[idx, :], self.data_y[idx, :]
@@ -101,6 +113,7 @@ class BaseDataFrame(ABC):
         df_train.raw_data = train_raw
         df_train.data_x = train_x
         df_train.data_y = train_y
+        df_train.vocab_processor = self.vocab_processor
         df_train.save_dataset()
 
         df_test = BaseDataFrame(self.ci, name_df_2, False)
@@ -108,6 +121,7 @@ class BaseDataFrame(ABC):
         df_test.raw_data = test_raw
         df_test.data_x = test_x
         df_test.data_y = test_y
+        df_test.vocab_processor = self.vocab_processor
         df_test.save_dataset()
 
         return df_train, df_test

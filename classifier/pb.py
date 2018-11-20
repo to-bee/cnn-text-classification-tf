@@ -3,7 +3,6 @@ import os
 
 import tensorflow as tf
 
-
 class Pb():
     """
     Protobuf wrapper
@@ -35,8 +34,9 @@ class Pb():
                 checkpoint_file = '%s-%d' % (self.ci.checkpoint_file, ckpt)
 
             # input_node_names = ['input', 'keep_prob']
-            output_node_name = 'output'
-            from tensorflow.python.tools.freeze_graph import freeze_graph  # import takes very long
+            output_node_name = 'output/scores'
+
+            from tensorflow.python.tools.freeze_graph import freeze_graph
             freeze_graph(input_graph=self.ci.pb_graph_path,
                          input_saver=None,
                          input_binary=False,

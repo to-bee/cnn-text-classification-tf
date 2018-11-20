@@ -23,6 +23,6 @@ if __name__ == '__main__':
     df_test.show_summary()
 
     pb = Pb(ci=ci)
-    cnn = TextCnnClassifierTrainer(df_train=df_train, df_test=df_test, ci=ci, pb=pb, restore_model=False)
+    cnn = TextCnnClassifierTrainer(df_train=df_train, df_test=df_test, ci=ci, pb=pb, restore_model=True)
     (global_step, ckpt, final_test_accuracy, final_test_cost) = cnn.fit()
     pb.save(ckpt, final_test_accuracy, final_test_cost)

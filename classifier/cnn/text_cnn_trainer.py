@@ -41,7 +41,7 @@ class TextCnnClassifierTrainer(ClassifierTrainer):
             feed_dict_train = {self.model.input_x: batch_x, self.model.y_true: batch_y, self.model.dropout_keep_prob: dropout_train}
             [global_step, _, _] = self.sess.run([self.model.global_step, self.model.train_step, self.model.summ], feed_dict=feed_dict_train)
 
-            if global_step % 20 == 0:
+            if global_step % 100 == 0:
                 print('step: %d' % global_step)
 
                 train_accuracy, train_cost, train_precision, train_recall, train_f1, train_summ = self.get_summary(batch_x, batch_y, dropout_train)
